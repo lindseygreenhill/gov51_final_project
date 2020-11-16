@@ -1,6 +1,6 @@
 ---
 title: "gov_51_final_project"
-author: "Owen Bernstein"
+author: "Owen Bernstein and Lindsey Greenhill"
 date: "11/15/2020"
 output: html_document
 ---
