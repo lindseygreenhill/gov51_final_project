@@ -27,16 +27,14 @@ library(tidyverse)
 # Reading in the data and then using bind rows to combine the candidates'
 # speeches.
 
-clinton_speeches <- read_csv("raw-data/hilary_clinton_speeches.csv")
-trump_speeches <- read_csv("raw-data/donald_trump_speeches.csv")
-sanders_speeches <- read_csv("raw-data/bernie_sanders_speeches.csv")
-romney_speeches <- read_csv("raw-data/mitt_romney_speeches.csv")
-obama_speeches <- read_csv("raw-data/barack_obama_speeches.csv")
-mccain_speeches <- read_csv("raw-data/john_mccain_speeches.csv")
-
-speeches <- bind_rows(clinton_speeches, trump_speeches,
-                      sanders_speeches, romney_speeches,
-                      obama_speeches, mccain_speeches)
+data <- read_csv("data/10-17-10-23.csv") %>%
+  bind_rows(read_csv("data/10-24-10-31.csv")) %>%
+  bind_rows(read_csv("data/11-1-11-7.csv")) %>%
+  bind_rows(read_csv("data/11-8-11-14.csv")) %>%
+  clean_names() %>%
+  filter(channel != "BBCNEWS") %>%
+  mutate(ranking = if_else(channel == "FOXNEWSW",
+                           1, if_else(channel == "CNNW", 2, 3)))
 
 # Cleaning the speeches and counting the number of words while removing stop
 # words.
