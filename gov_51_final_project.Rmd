@@ -139,7 +139,7 @@ save(sentiment_channels, file = "data/sentiment_channels.Rdata")
 
 ```{r making graphs}
 
-dat <- 
+load("data/sentiment_channels.Rdata")
 
 pop_time <- ggplot(sentiment_channels, aes(date_x, populism_count, color = channel)) +
   geom_jitter(alpha = 0.5, width = 100) +
@@ -149,13 +149,40 @@ pop_time <- ggplot(sentiment_channels, aes(date_x, populism_count, color = chann
   theme_minimal()
 
 
-sentiment_channels %>% 
+pop_hist <- sentiment_channels %>% 
   ggplot(., aes(channel, conservatism_count)) +
   geom_boxplot() + 
-  labs(title = "Populist Language in Speeches by Candidate",
-       x = "Candidate", y = "Percent Populist Language") +
+  labs(title = "Populist Language in Speeches by Channel",
+       subtitle = "October 17 to November 14",
+       x = "Channel", y = "Populist Language Count") +
   theme_minimal() +
   theme(axis.line = element_line())
+
+language_all_counts <- sentiment_channels %>%
+  pivot_longer(cols = populism_count:conservatism_count,
+               names_to = "metric",
+               values_to = "count") %>%
+  ggplot(aes(x = date_x, y = count, color = channel)) +
+  geom_point() +
+  theme_classic() +
+  facet_wrap(~metric) +
+  labs(title = "Language Sentiment Across Channels",
+       subtitle = "October 17 to November 14",
+       x = "Date",
+       y = "Word Count")
+
+sum_table <- sentiment_channels %>% group_by(channel) %>%
+  summarize(total_populism = sum(populism_count),
+            total_environment = sum(environment_count, na.rm = T),
+            total_immigration = sum(immigration_count, na.rm = T),
+            total_proggresivsim = sum(progressive_count, na.rm = T),
+            total_conservatism = sum(conservatism_count, na.rm = T),
+            .groups = "drop")
+
+summ_table_gt <- sum_table %>%
+  gt() %>%
+  tab_header(title = "Language Sentiment Across Channels",
+             subtitle = "October 17 to November 14")
 
 
 
