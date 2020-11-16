@@ -145,5 +145,42 @@ sentiment_speeches <- populism %>%
          date = mdy(date)) %>%
   distinct()
 
-save(sentiment_speeches, file = "presidential_speeches/sentiment_speeches.Rdata")
+save(sentiment_speeches, file = "data/sentiment_speeches.Rdata")
 ```
+
+```{r}
+load("data/sentiment_channels.Rdata")
+
+all_metrics <- sentiment_channels %>%
+  pivot_longer(cols = populism_count:conservatism_count,
+               names_to = "metric",
+               values_to = "count") %>%
+  ggplot(aes(x = date_x, y = count, color = channel)) +
+  geom_point() +
+  facet_wrap(~metric) +
+  theme_classic() +
+  labs(y = "Word Count",
+       x = "Date",
+       title = "Language Sentiment Across Channels",
+       subtitle = "October 17 to November 14")
+
+pop_ideology_graph <- sentiment_channels %>%
+  ggplot(aes(x = ranking, y = populism_count, color = channel)) +
+  geom_jitter() +
+  theme_classic() +
+  labs(title = "Populist Language Across Channel Ideology",
+       subtitle = "Fox News, CNN, MSNBC",
+       x = "1 = Most Conservative, 3 = Most Liberal",
+       y = "Count")
+
+env_ideology_graph <- sentiment_channels %>%
+  ggplot(aes(x = ranking, y = environment_count, color = channel)) +
+  geom_jitter() +
+  theme_classic() +
+  labs(title = "Environment Language Across Channel Ideology",
+       subtitle = "Fox News, CNN, MSNBC",
+       x = "1 = Most Conservative, 3 = Most Liberal",
+       y = "Count")
+
+```
+
