@@ -1,0 +1,151 @@
+---
+title: "gov_51_final_project"
+author: "Owen Bernstein"
+date: "11/15/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Loading necessary packages
+
+library(gt)
+library(broom)
+library(skimr)
+library(lubridate)
+library(janitor)
+library(dotwhisker)
+library(tidytext)
+library(ggthemes)
+library(webshot)
+library(tidyverse)
+```
+
+```{r data loading, include = FALSE}
+
+# Reading in the data and then using bind rows to combine the candidates'
+# speeches.
+
+clinton_speeches <- read_csv("raw-data/hilary_clinton_speeches.csv")
+trump_speeches <- read_csv("raw-data/donald_trump_speeches.csv")
+sanders_speeches <- read_csv("raw-data/bernie_sanders_speeches.csv")
+romney_speeches <- read_csv("raw-data/mitt_romney_speeches.csv")
+obama_speeches <- read_csv("raw-data/barack_obama_speeches.csv")
+mccain_speeches <- read_csv("raw-data/john_mccain_speeches.csv")
+
+speeches <- bind_rows(clinton_speeches, trump_speeches,
+                      sanders_speeches, romney_speeches,
+                      obama_speeches, mccain_speeches)
+
+# Cleaning the speeches and counting the number of words while removing stop
+# words.
+
+tidy_speeches <- speeches %>% 
+  select("Speaker":"Text") %>% 
+  clean_names() %>% 
+  filter(speaker == "Donald Trump" | speaker == "Hilary Clinton" |
+           speaker == "Bernie Sanders" | speaker == "Mitt Romney" |
+           speaker == "Barack Obama" | speaker == "John McCain") %>% 
+  group_by(speaker, title, region, date) %>% 
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>% 
+  filter(! word %in% c("applause", "inaudible","cheers", "laughing",
+                       "[applause]", "[inaudible]", "[cheers]",
+                       "[laughing]", "(applause)", "(inaudible)","(cheers)",
+                       "(laughing)")) %>% 
+  count(word) %>% 
+  mutate(total_words = sum(n))
+```
+
+```{r basket of words, include = FALSE}
+
+# Counting words by each differnet content category
+
+populism <- tidy_speeches %>% 
+  group_by(speaker, title, region, total_words, date) %>% 
+  filter(str_detect(word, "deceit") | str_detect(word, "treason")
+         | str_detect(word, "betray") | str_detect(word, "absurd")
+         | str_detect(word, "arrogant") | str_detect(word, "promise") 
+         | str_detect(word, "corrupt") | str_detect(word, "direct")
+         | str_detect(word, "elite") | str_detect(word, "establishment")
+         | str_detect(word, "ruling") | str_detect(word, "caste")
+         | str_detect(word, "class") | str_detect(word, "mafia")
+         | str_detect(word, "freedom of expression")
+         | str_detect(word, "undemocratic") | str_detect(word, "politic")
+         | str_detect(word, "propaganda") | str_detect(word, "referend")
+         | str_detect(word, "regime") | str_detect(word, "shame")
+         | str_detect(word, "admit") | str_detect(word, "tradition")
+         | str_detect(word, "people")) %>% 
+  mutate(populism_count = sum(n)) %>% 
+  arrange(desc(populism_count))
+
+environment <- tidy_speeches %>% 
+  group_by(speaker, title, region, total_words, date) %>% 
+  filter(str_detect(word, "green") | str_detect(word, "climate")
+         | str_detect(word, "environment") | str_detect(word, "heating")
+         | str_detect(word, "durable")) %>% 
+  mutate(environment_count = sum(n)) %>% 
+  arrange(desc(environment_count))
+
+immigration <- tidy_speeches %>% 
+  group_by(speaker, title, region, total_words, date) %>% 
+  filter(str_detect(word, "asylum") | str_detect(word, "halal")
+         | str_detect(word, "scarf") | str_detect(word, "illegal")
+         | str_detect(word, "immigra") | str_detect(word, "Islam") 
+         | str_detect(word, "Koran") | str_detect(word, "Muslim")
+         | str_detect(word, "foreign")) %>% 
+  mutate(immigration_count = sum(n)) %>% 
+  arrange(desc(immigration_count))
+
+progressive <- tidy_speeches %>% 
+  group_by(speaker, title, region, total_words, date) %>% 
+  filter(str_detect(word,"progress") | str_detect(word, "right")
+         | str_detect(word, "freedom") | str_detect(word, "self-disposition")
+         | str_detect(word, "handicap") | str_detect(word, "poverty") 
+         | str_detect(word, "protection") | str_detect(word, "honest")
+         | str_detect(word, "equal") | str_detect(word, "education")
+         | str_detect(word, "pension") | str_detect(word, "social") 
+         | str_detect(word, "weak")) %>% 
+  mutate(progressive_count = sum(n)) %>% 
+  arrange(desc(progressive_count))
+
+conservatism <- tidy_speeches %>% 
+  group_by(speaker, title, region, total_words, date) %>% 
+  filter(str_detect(word, "belief") | str_detect(word, "famil")
+         | str_detect(word, "church") | str_detect(word, "norm")
+         | str_detect(word, "porn") | str_detect(word, "sex")
+         | str_detect(word, "values") | str_detect(word, "conservative")
+         | str_detect(word, "conservatism") | str_detect(word, "custom")) %>% 
+  mutate(conservatism_count = sum(n)) %>% 
+  arrange(desc(conservatism_count))
+
+# Combining each of the conent categories into a single data frame. Also adding
+# party affiliations and percent values
+
+sentiment_speeches <- populism %>% 
+  full_join(environment, by = c("title", "date", "speaker", "region",
+                                "total_words")) %>% 
+  full_join(immigration, by = c("title", "date", "speaker", "region",
+                                "total_words")) %>% 
+  full_join(progressive, by = c("title", "date", "speaker", "region",
+                                "total_words")) %>% 
+  full_join(conservatism, by = c("title", "date", "speaker", "region",
+                                 "total_words"))%>%
+  select(speaker, region, total_words, date, title, populism_count,
+         environment_count, immigration_count, 
+         progressive_count, conservatism_count) %>%
+  ungroup() %>% 
+  mutate(populism_percent = populism_count / total_words * 100,
+         environment_percent = environment_count / total_words * 100,
+         immigration_percent = immigration_count / total_words * 100,
+         progressive_percent = progressive_count / total_words * 100,
+         conservatism_percent = conservatism_count / total_words * 100,
+         party = ifelse(speaker == "Donald Trump" |
+                          speaker == "Mitt Romney" |
+                          speaker == "John McCain", "Republican", "Democrat"),
+         date = mdy(date)) %>%
+  distinct()
+
+save(sentiment_speeches, file = "presidential_speeches/sentiment_speeches.Rdata")
+```
