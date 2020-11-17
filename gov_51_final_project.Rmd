@@ -19,7 +19,9 @@ library(dotwhisker)
 library(tidytext)
 library(ggthemes)
 library(webshot)
+library(stargazer)
 library(tidyverse)
+
 ```
 
 ```{r data loading, include = FALSE}
@@ -184,6 +186,27 @@ summ_table_gt <- sum_table %>%
   tab_header(title = "Language Sentiment Across Channels",
              subtitle = "October 17 to November 14")
 
+
+
+```
+
+
+```{r regression}
+
+sentiment_channels
+
+populist_fit <- lm(populism_count ~ ranking, data = sentiment_channels)
+immigration_fit <- lm(immigration_count ~ ranking, data = sentiment_channels)
+env_fit <- lm(environment_count ~ ranking, data = sentiment_channels)
+prog_fit <- lm(progressive_count ~ ranking, data = sentiment_channels)
+cons_fit <- lm(conservatism_count ~ ranking, data = sentiment_channels)
+summary(ranking_fit)
+
+stargazer(populist_fit, immigration_fit,
+          env_fit,
+          prog_fit,
+          cons_fit,
+          type = "text")
 
 
 ```
