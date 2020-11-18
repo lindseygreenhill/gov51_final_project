@@ -2,7 +2,7 @@
 title: "gov_51_final_project"
 author: "Owen Bernstein and Lindsey Greenhill"
 date: "11/15/2020"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -24,7 +24,7 @@ library(tidyverse)
 
 ```
 
-```{r data loading, include = FALSE}
+```{r data loading, include = FALSE, eval=FALSE}
 
 # Reading in the data and then using bind rows to combine the candidates'
 # speeches.
@@ -55,7 +55,7 @@ tidy_data <- data %>%
 
 ```
 
-```{r basket of words, include = FALSE}
+```{r basket of words, include = FALSE, eval=FALSE}
 
 # Counting words by each differnet content category
 
@@ -139,7 +139,7 @@ save(sentiment_channels, file = "data/sentiment_channels.Rdata")
 ```
 
 
-```{r making graphs}
+```{r making graphs, include = FALSE}
 
 load("data/sentiment_channels.Rdata")
 
@@ -152,11 +152,47 @@ pop_time <- ggplot(sentiment_channels, aes(date_x, populism_count, color = chann
 
 
 pop_hist <- sentiment_channels %>% 
-  ggplot(., aes(channel, conservatism_count)) +
+  ggplot(., aes(channel, populism_count)) +
   geom_boxplot() + 
   labs(title = "Populist Language in Speeches by Channel",
        subtitle = "October 17 to November 14",
-       x = "Channel", y = "Populist Language Count") +
+       x = "Channel", y = "Language Count") +
+  theme_minimal() +
+  theme(axis.line = element_line())
+
+env_hist <- sentiment_channels %>% 
+  ggplot(., aes(channel, environment_count)) +
+  geom_boxplot() + 
+  labs(title = "Environmental Language in Speeches by Channel",
+       subtitle = "October 17 to November 14",
+       x = "Channel", y = "Language Count") +
+  theme_minimal() +
+  theme(axis.line = element_line())
+
+imm_hist <- sentiment_channels %>% 
+  ggplot(., aes(channel, immigration_count)) +
+  geom_boxplot() + 
+  labs(title = "Immigration Language in Speeches by Channel",
+       subtitle = "October 17 to November 14",
+       x = "Channel", y = "Language Count") +
+  theme_minimal() +
+  theme(axis.line = element_line())
+
+prog_hist <- sentiment_channels %>% 
+  ggplot(., aes(channel, progressive_count)) +
+  geom_boxplot() + 
+  labs(title = "Progressivism Language in Speeches by Channel",
+       subtitle = "October 17 to November 14",
+       x = "Channel", y = "Language Count") +
+  theme_minimal() +
+  theme(axis.line = element_line())
+
+cons_hist <- sentiment_channels %>% 
+  ggplot(., aes(channel, conservatism_count)) +
+  geom_boxplot() + 
+  labs(title = "Conservatism Language in Speeches by Channel",
+       subtitle = "October 17 to November 14",
+       x = "Channel", y = "Language Count") +
   theme_minimal() +
   theme(axis.line = element_line())
 
@@ -191,7 +227,7 @@ summ_table_gt <- sum_table %>%
 ```
 
 
-```{r regression}
+```{r regression, include = FALSE}
 
 sentiment_channels
 
@@ -200,14 +236,74 @@ immigration_fit <- lm(immigration_count ~ ranking, data = sentiment_channels)
 env_fit <- lm(environment_count ~ ranking, data = sentiment_channels)
 prog_fit <- lm(progressive_count ~ ranking, data = sentiment_channels)
 cons_fit <- lm(conservatism_count ~ ranking, data = sentiment_channels)
-summary(ranking_fit)
 
+
+reg_plots <- sentiment_channels %>%
+  pivot_longer(cols = populism_count:conservatism_count,
+               names_to = "metric",
+               values_to = "count") %>%
+  ggplot(aes(x = ranking, y = count)) +
+  geom_jitter(width = .2) +
+  geom_smooth(method = "lm") +
+  facet_wrap(~metric) +
+  theme_classic() +
+  labs(title = "Language Count vs. Channel Ranking",
+       x = "Channel Ideology Ranking",
+       y = "Count")
+
+
+```
+## Preliminary Analysis
+
+In this analysis, we gathered, cleaned, and wrangled news data from October 17 to November 14, 2020. 
+We chose to include Fox News, CNN, and MSNB in our analysis and assigned those channels ideological
+rankings of 1, 2, and 3, respectively. The plots below show our preliminary findings.
+
+### How much specific language is each channel using?
+
+We classified the below categories using word baskets built by the study referenced in our project proposal. The table below shows the raw counts of how many times each channel used a word associated with these categories. 
+
+```{r gt, echo=FALSE}
+summ_table_gt
+```
+
+### How much specific language is each channel using each day?
+
+The histograms below visualize how much channels use the categorical language on a daily basis. 
+
+```{r hists, warning = FALSE, echo=FALSE}
+pop_hist
+env_hist
+imm_hist
+prog_hist
+cons_hist
+
+```
+
+### How does usage vary across time?
+
+The plots below visualize the change in daily language use for each channel.
+
+```{r time, echo=FALSE, warning=FALSE}
+language_all_counts
+```
+
+### Regression: Does Ideology have an affect on language usage?
+
+The table below shows the results of five different regressions and the plot below shows the line of best fit for each regression. 
+
+```{r regs, results = "asis", echo=FALSE, warning=FALSE}
 stargazer(populist_fit, immigration_fit,
           env_fit,
           prog_fit,
           cons_fit,
-          type = "text")
+          type = "latex")
+reg_plots
+
 
 
 ```
+
+There does not appear to be a strong relationship between ideology and language usage. 
+
 
