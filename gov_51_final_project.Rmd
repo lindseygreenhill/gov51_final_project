@@ -21,13 +21,13 @@ library(ggthemes)
 library(webshot)
 library(stargazer)
 library(tidyverse)
-
+library(ggrepel)
 ```
 
 ```{r data loading, include = FALSE, eval=FALSE}
 
 # Reading in the data and then using bind rows to combine the candidates'
-# speeches.
+# Chyrons.
 
 data <- read_csv("data/10-17-10-23.csv") %>%
   bind_rows(read_csv("data/10-24-10-31.csv")) %>%
@@ -38,7 +38,7 @@ data <- read_csv("data/10-17-10-23.csv") %>%
   mutate(ranking = if_else(channel == "FOXNEWSW",
                            1, if_else(channel == "CNNW", 2, 3)))
 
-# Cleaning the speeches and counting the number of words while removing stop
+# Cleaning the Chyrons and counting the number of words while removing stop
 # words.
 
 tidy_data <- data %>% 
@@ -141,59 +141,80 @@ save(sentiment_channels, file = "data/sentiment_channels.Rdata")
 
 ```{r making graphs, include = FALSE}
 
+is_outlier <- function(x) {
+  return(x < quantile(x, 0.25, na.rm = T) - 1.5 * IQR(x) | x > quantile(x, 0.75, na.rm = T) + 1.5 * IQR(x))
+}
+
 load("data/sentiment_channels.Rdata")
+
+sentiment_channels[is.na(sentiment_channels)] <- 0
 
 pop_time <- ggplot(sentiment_channels, aes(date_x, populism_count, color = channel)) +
   geom_jitter(alpha = 0.5, width = 100) +
   geom_smooth(method = "lm", se = F) +
-  labs(title = "Populist Language in Presidential Speeches Over Time",
+  labs(title = "Populist Language in Chyrons Over Time",
        x = "Date of Speech", y = "Percent Populist Language") +
   theme_minimal()
 
 
 pop_hist <- sentiment_channels %>% 
+  group_by(channel) %>% 
+  mutate(outlier = ifelse(is_outlier(populism_count), populism_count, NA)) %>% 
   ggplot(., aes(channel, populism_count)) +
   geom_boxplot() + 
-  labs(title = "Populist Language in Speeches by Channel",
+  labs(title = "Populist Language in Chyrons by Channel",
        subtitle = "October 17 to November 14",
        x = "Channel", y = "Language Count") +
   theme_minimal() +
+  geom_text_repel(aes(label = outlier), na.rm = T, hjust = -0.3) +
   theme(axis.line = element_line())
 
 env_hist <- sentiment_channels %>% 
+  group_by(channel) %>% 
+  mutate(outlier = ifelse(is_outlier(environment_count), environment_count, NA)) %>% 
   ggplot(., aes(channel, environment_count)) +
   geom_boxplot() + 
-  labs(title = "Environmental Language in Speeches by Channel",
+  labs(title = "Environmental Language in Chyrons by Channel",
        subtitle = "October 17 to November 14",
        x = "Channel", y = "Language Count") +
   theme_minimal() +
+   geom_text_repel(aes(label = outlier), na.rm = T, hjust = -0.3) +
   theme(axis.line = element_line())
 
 imm_hist <- sentiment_channels %>% 
+  group_by(channel) %>% 
+  mutate(outlier = ifelse(is_outlier(immigration_count), immigration_count, NA)) %>% 
   ggplot(., aes(channel, immigration_count)) +
   geom_boxplot() + 
-  labs(title = "Immigration Language in Speeches by Channel",
+  labs(title = "Immigration Language in Chyrons by Channel",
        subtitle = "October 17 to November 14",
        x = "Channel", y = "Language Count") +
   theme_minimal() +
+   geom_text_repel(aes(label = outlier), na.rm = T, hjust = -0.3) +
   theme(axis.line = element_line())
 
-prog_hist <- sentiment_channels %>% 
+prog_hist <- sentiment_channels %>%
+  group_by(channel) %>% 
+  mutate(outlier = ifelse(is_outlier(progressive_count), progressive_count, NA)) %>% 
   ggplot(., aes(channel, progressive_count)) +
   geom_boxplot() + 
-  labs(title = "Progressivism Language in Speeches by Channel",
+  labs(title = "Progressivism Language in Chyrons by Channel",
        subtitle = "October 17 to November 14",
        x = "Channel", y = "Language Count") +
   theme_minimal() +
+   geom_text_repel(aes(label = outlier), na.rm = T, hjust = -0.3) +
   theme(axis.line = element_line())
 
 cons_hist <- sentiment_channels %>% 
+  group_by(channel) %>% 
+  mutate(outlier = ifelse(is_outlier(conservatism_count), conservatism_count, NA)) %>% 
   ggplot(., aes(channel, conservatism_count)) +
   geom_boxplot() + 
-  labs(title = "Conservatism Language in Speeches by Channel",
+  labs(title = "Conservatism Language in Chyrons by Channel",
        subtitle = "October 17 to November 14",
        x = "Channel", y = "Language Count") +
   theme_minimal() +
+   geom_text_repel(aes(label = outlier), na.rm = T, hjust = -0.3) +
   theme(axis.line = element_line())
 
 language_all_counts <- sentiment_channels %>%
@@ -236,6 +257,12 @@ immigration_fit <- lm(immigration_count ~ ranking, data = sentiment_channels)
 env_fit <- lm(environment_count ~ ranking, data = sentiment_channels)
 prog_fit <- lm(progressive_count ~ ranking, data = sentiment_channels)
 cons_fit <- lm(conservatism_count ~ ranking, data = sentiment_channels)
+
+pop_fac_fit <- lm(populism_count ~ as.factor(channel), data = sentiment_channels)
+img_fac_fit <- lm(immigration_count ~ as.factor(channel), data = sentiment_channels)
+env_fac_fit <- lm(environment_count ~ as.factor(channel), data = sentiment_channels)
+prog_fac_fit <- lm(progressive_count ~ as.factor(channel), data = sentiment_channels)
+cons_fac_fit <- lm(conservatism_count ~ as.factor(channel), data = sentiment_channels)
 
 
 reg_plots <- sentiment_channels %>%
@@ -297,7 +324,20 @@ stargazer(populist_fit, immigration_fit,
           env_fit,
           prog_fit,
           cons_fit,
+          single.row = TRUE,
+          column.sep.width = "0.3pt",
+          font.size= "footnotesize",
           type = "latex")
+
+stargazer(pop_fac_fit, img_fac_fit,
+          env_fac_fit,
+          prog_fac_fit,
+          cons_fac_fit,
+          single.row = TRUE,
+          column.sep.width = "0.3pt",
+          font.size= "footnotesize",
+          type = "latex")
+
 reg_plots
 
 
@@ -305,5 +345,4 @@ reg_plots
 ```
 
 There does not appear to be a strong relationship between ideology and language usage. 
-
 
