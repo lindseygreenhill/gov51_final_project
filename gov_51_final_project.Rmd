@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Loading necessary packages
 
 library(gt)
+library(quanteda)
 library(broom)
 library(skimr)
 library(lubridate)
@@ -38,22 +39,66 @@ data <- read_csv("data/10-17-10-23.csv") %>%
   mutate(ranking = if_else(channel == "FOXNEWSW",
                            1, if_else(channel == "CNNW", 2, 3)))
 
-# Cleaning the Chyrons and counting the number of words while removing stop
-# words.
+# Cleaning the Chyrons and creating variables for post election and primetime
+# coverage
 
 tidy_data <- data %>% 
   clean_names() %>% 
   mutate(date = mdy_hm(date_time_utc)) %>%
-  mutate(date_x = as.Date(substr(date, 1, 10))) %>%
-  select(channel, text, ranking, date_x) %>%
-  unnest_tokens(word, text) %>%
-  anti_join(stop_words) %>%
-  group_by(channel, ranking, date_x, word) %>%
-  count()
+  mutate(date_x = as.Date(substr(date, 1, 10)),
+         hour = as.double(substr(date, 12, 13))) %>%
+  select(channel, text, ranking, date_x, hour) %>% 
+  mutate(post_election = ifelse(date_x > "2020-11-03", 1, 0),
+         primetime = ifelse(hour > 19 & hour < 24, 1, 0))
 
+# Turning data into a corpus for quanteda
 
+text_corpus <- corpus(tidy_data, text_field = "text")
 
 ```
+
+```{r wordcloud}
+
+# Turning corpus into tokens. Removing unimportant words and selecting for
+# ngrams = 2
+
+wordcloud_toks <- tokens(text_corpus, 
+                      remove_punct = TRUE,
+                      remove_symbols = TRUE,
+                      remove_numbers = TRUE,
+                      remove_url = TRUE) %>% 
+  tokens_tolower() %>%
+  tokens_remove(pattern=stopwords("en")) %>% 
+  tokens_remove(pattern= c("u201c", "u00b0", "u2014", "wopi", "avi", "ooo", "000", "ito", "ynl", "f'avl", "foxnews.com", "ufb02pi", "ufb021", "ufbo2l", "ufb02L")) %>% 
+  tokens_select(min_nchar=3) %>% 
+  tokens_ngrams(n = 2)
+
+wordcloud_dfm <- dfm(wordcloud_toks, groups = "channel")
+
+textplot_wordcloud(wordcloud_dfm, comparison = T, min_count = 150)
+
+```
+
+```{r comparison graphs}
+
+# Using tokens to compare word usage by post_election variable
+
+post_election_dfm <- dfm(wordcloud_toks, groups = "post_election")
+
+post_election_keyness <- textstat_keyness(post_election_dfm, target = "1")
+
+post_election_relative <- textplot_keyness(post_election_keyness, n = 15L)
+
+# Using tokens to compare word usage by primetime variable
+
+primetime_dfm <- dfm(wordcloud_toks, groups = "primetime")
+
+primetime_keyness <- textstat_keyness(primetime_dfm, target = "1")
+
+primetime_relative <- textplot_keyness(primetime_keyness, n = 15L)
+
+```
+
 
 ```{r basket of words, include = FALSE, eval=FALSE}
 
