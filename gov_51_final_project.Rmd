@@ -261,13 +261,13 @@ full_count_gt <- gt(full_count_df) %>%
 
 # Making dfm for regression and turning it into a df
 
-regression_dfm <- dfm(content_toks, groups = c("channel", "post_election", "primetime", "date_x", "ranking"))
+regression_dfm <- dfm(content_toks, groups = c("channel", "post_election", "primetime", "date_x","hour", "ranking"))
 
 regression_categories <- dfm_lookup(regression_dfm, dictionary = content_dict)
 
 regression_df <- convert(regression_categories, to = "data.frame") %>% 
   group_by(doc_id) %>% 
-  separate(doc_id, c("channel", "election", "primetime", "date", "ranking"), sep = "([.])", extra = "merge") %>% 
+  separate(doc_id, c("channel", "election", "primetime", "date", "hour", "ranking"), sep = "([.])", extra = "merge") %>% 
   mutate(date = ymd(date))
 
 # Running regressions
@@ -334,7 +334,7 @@ The most mentioned phrase amonst all the networks is President Trump (from Fox),
 
 ## Keyness Plot Analysis
 
-In addition to word cloud analysis, we also looked at keyness plots of the news chyrons. A keyness plot is a plot that compares the usage of words between two different data sets. We wanted to look at the potential impact of our post_election and prime_time variables. We created a keyness plot for each variable. The first keyness plot looks at the difference in language use from all channels betwee pre and post election coverage. The second keness plot looks at the difference in language use from all channels between prime time and non prime time coverage. 
+In addition to word cloud analysis, we also looked at keyness plots of the news chyrons. A keyness plot is a plot that compares the usage of words between two different data sets. We wanted to look at the potential impact of our post_election and prime_time variables. We created a keyness plot for each variable. The first keyness plot looks at the difference in language use from all channels betwee pre and post election coverage. The second keyness plot looks at the difference in language use from all channels between prime time and non prime time coverage. 
 
 ### Election Keyness Plot
 
@@ -347,7 +347,7 @@ post_election_relative
  
 ### Prime Time Keyness Plot
 
-We thought it could be interesting to look at prime time coverage vs non prime time coverage because of the saliency of prime time coverage. Additionally, the respective  hosts for each channel's prime time news shows tend to be particulary divisive politically, so we thought that might have an impact on the language used during their shows. Interestingly, non prime time coverage seems to focus more on cities compared to prime time coverage. Meanwhile, prime time coverage seems to focus on the election compared to non prime e time coverage.
+We thought it could be interesting to look at prime time coverage vs non prime time coverage because of the salience of prime time coverage. Additionally, the respective  hosts for each channel's prime time news shows tend to be particularly divisive politically, so we thought that might have an impact on the language used during their shows. Interestingly, non prime time coverage seems to focus more on cities compared to prime time coverage. Meanwhile, prime time coverage seems to focus on the election compared to non prime e time coverage. 
 
 
 ```{r ptime_key, echo=FALSE}
