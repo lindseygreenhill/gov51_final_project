@@ -26,7 +26,7 @@ library(patchwork)
 library(ggrepel)
 ```
 
-```{r data loading, include = FALSE, eval=FALSE}
+```{r data loading, include = FALSE}
 
 # Reading in the data and then using bind rows to combine the candidates'
 # Chyrons.
@@ -58,7 +58,7 @@ text_corpus <- corpus(tidy_data, text_field = "text")
 
 ```
 
-```{r wordcloud}
+```{r wordcloud, include = FALSE}
 
 # Turning corpus into tokens. Removing unimportant words and selecting for
 # ngrams = 2
@@ -80,7 +80,7 @@ textplot_wordcloud(wordcloud_dfm, comparison = T, min_count = 150)
 
 ```
 
-```{r comparison graphs}
+```{r comparison graphs, include = FALSE}
 
 # Using tokens to compare word usage by post_election variable
 
@@ -100,7 +100,7 @@ primetime_relative <- textplot_keyness(primetime_keyness, n = 15L)
 
 ```
 
-```{r dictionary and data frame}
+```{r dictionary and data frame, include = FALSE}
 
 # Creating the content dictionaries
 
@@ -163,7 +163,7 @@ content_df <- convert(content_categories, to = "data.frame") %>%
 
 ```
 
-```{r creating boxplots}
+```{r creating boxplots, include = FALSE}
 
 # Creating boxplot for populism by channel
 
@@ -224,10 +224,6 @@ con_box <- content_df %>%
        x = "Channel", y = "Language Count") +
   theme_minimal() +
   theme(axis.line = element_line())
-
-# Combining boxplots
-
-all_boxes <- (pop_box + img_box + env_box) / (pro_box + con_box)
 
 ```
 
@@ -292,6 +288,7 @@ con_fit <-
   lm(conservative ~ as.factor(channel) + as.factor(election) + as.factor(primetime),
      data = regression_df)
 ```
+
 ## Preliminary Analysis
 
 In this analysis, we gathered, cleaned, and wrangled news data from October 17 to November 14, 2020. 
@@ -299,6 +296,19 @@ We chose to include Fox News, CNN, and MSNB in our analysis and assigned those c
 rankings of 1, 2, and 3, respectively. The plots below show our preliminary findings.
 
 ### How much specific language is each channel using?
+
+Visualizing the language each channel uses by a variety of variables. 
+
+```{r visualizations, echo = FALSE}
+
+textplot_wordcloud(wordcloud_dfm, comparison = T, min_count = 150)
+
+post_election_relative
+
+primetime_relative
+
+```
+
 
 We classified the below categories using word baskets built by the study referenced in our project proposal. The table below shows the raw counts of how many times each channel used a word associated with these categories. 
 
@@ -311,7 +321,13 @@ full_count_gt
 The histograms below visualize how much channels use the categorical language on a daily basis. 
 
 ```{r hists, warning = FALSE, echo=FALSE}
-all_boxes
+
+pop_box
+img_box  
+env_box 
+pro_box 
+con_box
+
 ```
 
 ### How does usage vary across time?
@@ -329,8 +345,8 @@ The table below shows the results of five different regressions and the plot bel
 ```{r regs, results = "asis", echo=FALSE, warning=FALSE}
 stargazer(pop_fit, img_fit,
           env_fit,
-          prog_fit,
-          cons_fit,
+          pro_fit,
+          con_fit,
           single.row = TRUE,
           column.sep.width = "0.3pt",
           font.size= "footnotesize",
