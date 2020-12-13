@@ -22,6 +22,7 @@ library(ggthemes)
 library(webshot)
 library(stargazer)
 library(tidyverse)
+library(patchwork)
 library(ggrepel)
 ```
 
@@ -48,8 +49,8 @@ tidy_data <- data %>%
   mutate(date_x = as.Date(substr(date, 1, 10)),
          hour = as.double(substr(date, 12, 13))) %>%
   select(channel, text, ranking, date_x, hour) %>% 
-  mutate(post_election = ifelse(date_x > "2020-11-03", 1, 0),
-         primetime = ifelse(hour > 19 & hour < 24, 1, 0))
+  mutate(post_election = ifelse(date_x > "2020-11-03", "Post-Election", "Pre-Election"),
+         primetime = ifelse(hour > 19 & hour < 24, "Primetime", "Not Primetime"))
 
 # Turning data into a corpus for quanteda
 
@@ -69,7 +70,7 @@ wordcloud_toks <- tokens(text_corpus,
                       remove_url = TRUE) %>% 
   tokens_tolower() %>%
   tokens_remove(pattern=stopwords("en")) %>% 
-  tokens_remove(pattern= c("u201c", "u00b0", "u2014", "wopi", "avi", "ooo", "000", "ito", "ynl", "f'avl", "foxnews.com", "ufb02pi", "ufb021", "ufbo2l", "ufb02L")) %>% 
+  tokens_remove(pattern= c("u201c", "u00b0", "u2014", "wopi", "avi", "ooo", "000", "ito", "ynl", "f'avl", "foxnews.com", "ufb02pi", "ufb021", "ufbo2l", "ufb02L", "rpm")) %>% 
   tokens_select(min_nchar=3) %>% 
   tokens_ngrams(n = 2)
 
@@ -85,7 +86,7 @@ textplot_wordcloud(wordcloud_dfm, comparison = T, min_count = 150)
 
 post_election_dfm <- dfm(wordcloud_toks, groups = "post_election")
 
-post_election_keyness <- textstat_keyness(post_election_dfm, target = "1")
+post_election_keyness <- textstat_keyness(post_election_dfm, target = "Post-Election")
 
 post_election_relative <- textplot_keyness(post_election_keyness, n = 15L)
 
@@ -93,237 +94,203 @@ post_election_relative <- textplot_keyness(post_election_keyness, n = 15L)
 
 primetime_dfm <- dfm(wordcloud_toks, groups = "primetime")
 
-primetime_keyness <- textstat_keyness(primetime_dfm, target = "1")
+primetime_keyness <- textstat_keyness(primetime_dfm, target = "Primetime")
 
 primetime_relative <- textplot_keyness(primetime_keyness, n = 15L)
 
 ```
 
+```{r dictionary and data frame}
 
-```{r basket of words, include = FALSE, eval=FALSE}
+# Creating the content dictionaries
 
-# Counting words by each differnet content category
+content_dict <- dictionary(list(populism = c("deceit", "treason",
+                             "betray", "absurd",
+                             "arrogant", "promise", 
+                             "corrupt", "direct",
+                             "elite", "establishment",
+                             "ruling", "caste",
+                             "class", "mafia",
+                             "undemocratic", "politics", "political", "politicize", "politician",
+                             "propaganda", "referendum",
+                             "regime", "shame",
+                             "admit", "tradition",
+                             "people"),
+                environment = c("green","climate",
+                                "environment","heating",
+                                "durable"),
+                immigration = c("asylum","halal",
+                                "scarf","illegal",
+                                "immigrant", "immigration", "immigrate", "Islam", 
+                                "Koran","Muslim",
+                                "foreign"),
+                progressive = c("progress","right",
+                                "freedom","self-disposition",
+                                "handicap","poverty",
+                                "protection","honest",
+                                "equal","education",
+                                "pension","social",
+                                "weak"),
+                conservative = c("belief","famil",
+                                 "church","norm",
+                                 "porn","sex",
+                                 "values","conservative",
+                                 "conservatism","custom")))
 
-populism <- tidy_data %>% 
-  group_by(date_x, channel, ranking) %>% 
-  filter(str_detect(word, "deceit") | str_detect(word, "treason")
-         | str_detect(word, "betray") | str_detect(word, "absurd")
-         | str_detect(word, "arrogant") | str_detect(word, "promise") 
-         | str_detect(word, "corrupt") | str_detect(word, "direct")
-         | str_detect(word, "elite") | str_detect(word, "establishment")
-         | str_detect(word, "ruling") | str_detect(word, "caste")
-         | str_detect(word, "class") | str_detect(word, "mafia")
-         | str_detect(word, "freedom of expression")
-         | str_detect(word, "undemocratic") | str_detect(word, "politic")
-         | str_detect(word, "propaganda") | str_detect(word, "referend")
-         | str_detect(word, "regime") | str_detect(word, "shame")
-         | str_detect(word, "admit") | str_detect(word, "tradition")
-         | str_detect(word, "people")) %>% 
-  summarize(populism_count = sum(n)) %>% 
-  arrange(desc(populism_count))
+# Creating new dfm for the content analysis
 
-environment <- tidy_data %>% 
-  group_by(date_x, channel, ranking) %>% 
-  filter(str_detect(word, "green") | str_detect(word, "climate")
-         | str_detect(word, "environment") | str_detect(word, "heating")
-         | str_detect(word, "durable")) %>% 
-  summarise(environment_count = sum(n)) %>% 
-  arrange(desc(environment_count))
+content_toks <- tokens(text_corpus, 
+                      remove_punct = TRUE,
+                      remove_symbols = TRUE,
+                      remove_numbers = TRUE,
+                      remove_url = TRUE) %>% 
+  tokens_tolower() %>%
+  tokens_remove(pattern=stopwords("en")) %>% 
+  tokens_select(min_nchar=3)
 
-immigration <- tidy_data %>% 
-  group_by(date_x, channel, ranking) %>% 
-  filter(str_detect(word, "asylum") | str_detect(word, "halal")
-         | str_detect(word, "scarf") | str_detect(word, "illegal")
-         | str_detect(word, "immigra") | str_detect(word, "Islam") 
-         | str_detect(word, "Koran") | str_detect(word, "Muslim")
-         | str_detect(word, "foreign")) %>% 
-  summarise(immigration_count = sum(n)) %>% 
-  arrange(desc(immigration_count))
+content_dfm <- dfm(content_toks, groups = c("channel", "date_x"))
 
-progressive <- tidy_data %>% 
-  group_by(date_x, channel, ranking) %>% 
-  filter(str_detect(word,"progress") | str_detect(word, "right")
-         | str_detect(word, "freedom") | str_detect(word, "self-disposition")
-         | str_detect(word, "handicap") | str_detect(word, "poverty") 
-         | str_detect(word, "protection") | str_detect(word, "honest")
-         | str_detect(word, "equal") | str_detect(word, "education")
-         | str_detect(word, "pension") | str_detect(word, "social") 
-         | str_detect(word, "weak")) %>% 
-  summarise(progressive_count = sum(n)) %>% 
-  arrange(desc(progressive_count))
+# Selecting words in the dictionaries
 
-conservatism <- tidy_data %>% 
-  group_by(date_x, channel, ranking) %>%  
-  filter(str_detect(word, "belief") | str_detect(word, "famil")
-         | str_detect(word, "church") | str_detect(word, "norm")
-         | str_detect(word, "porn") | str_detect(word, "sex")
-         | str_detect(word, "values") | str_detect(word, "conservative")
-         | str_detect(word, "conservatism") | str_detect(word, "custom")) %>% 
-  summarise(conservatism_count = sum(n)) %>% 
-  arrange(desc(conservatism_count))
+content_categories <- dfm_lookup(content_dfm, dictionary = content_dict)
 
-# Combining each of the conent categories into a single data frame. Also adding
-# party affiliations and percent values
+# Turning dfm into dataframe
 
-sentiment_channels <- populism %>% 
-  full_join(environment, by = c("date_x", "channel",
-                                "ranking")) %>% 
-  full_join(immigration, by = c("date_x", "channel",
-                                "ranking")) %>% 
-  full_join(progressive, by = c("date_x", "channel",
-                                "ranking")) %>% 
-  full_join(conservatism, by = c("date_x", "channel",
-                                "ranking"))%>%
-  select(date_x, channel, ranking, populism_count,
-         environment_count, immigration_count, 
-         progressive_count, conservatism_count) %>%
-  ungroup() %>% 
-  distinct()
+content_df <- convert(content_categories, to = "data.frame") %>% 
+  group_by(doc_id) %>% 
+  separate(doc_id, c("channel", "date"), extra = "merge") %>% 
+  mutate(date = ymd(date))
 
-save(sentiment_channels, file = "data/sentiment_channels.Rdata")
 ```
 
+```{r creating boxplots}
 
-```{r making graphs, include = FALSE}
+# Creating boxplot for populism by channel
 
-is_outlier <- function(x) {
-  return(x < quantile(x, 0.25, na.rm = T) - 1.5 * IQR(x) | x > quantile(x, 0.75, na.rm = T) + 1.5 * IQR(x))
-}
-
-load("data/sentiment_channels.Rdata")
-
-sentiment_channels[is.na(sentiment_channels)] <- 0
-
-pop_time <- ggplot(sentiment_channels, aes(date_x, populism_count, color = channel)) +
-  geom_jitter(alpha = 0.5, width = 100) +
-  geom_smooth(method = "lm", se = F) +
-  labs(title = "Populist Language in Chyrons Over Time",
-       x = "Date of Speech", y = "Percent Populist Language") +
-  theme_minimal()
-
-
-pop_hist <- sentiment_channels %>% 
+pop_box <- content_df %>% 
   group_by(channel) %>% 
-  mutate(outlier = ifelse(is_outlier(populism_count), populism_count, NA)) %>% 
-  ggplot(., aes(channel, populism_count)) +
+  ggplot(., aes(channel, populism)) +
   geom_boxplot() + 
   labs(title = "Populist Language in Chyrons by Channel",
        subtitle = "October 17 to November 14",
        x = "Channel", y = "Language Count") +
   theme_minimal() +
-  geom_text_repel(aes(label = outlier), na.rm = T, hjust = -0.3) +
   theme(axis.line = element_line())
 
-env_hist <- sentiment_channels %>% 
+# Creating boxplot for environment by channel
+
+env_box <- content_df %>% 
   group_by(channel) %>% 
-  mutate(outlier = ifelse(is_outlier(environment_count), environment_count, NA)) %>% 
-  ggplot(., aes(channel, environment_count)) +
+  ggplot(., aes(channel, environment)) +
   geom_boxplot() + 
   labs(title = "Environmental Language in Chyrons by Channel",
        subtitle = "October 17 to November 14",
        x = "Channel", y = "Language Count") +
   theme_minimal() +
-   geom_text_repel(aes(label = outlier), na.rm = T, hjust = -0.3) +
   theme(axis.line = element_line())
 
-imm_hist <- sentiment_channels %>% 
+# Creating boxplot for immigration by channel
+
+img_box <- content_df %>% 
   group_by(channel) %>% 
-  mutate(outlier = ifelse(is_outlier(immigration_count), immigration_count, NA)) %>% 
-  ggplot(., aes(channel, immigration_count)) +
+  ggplot(., aes(channel, immigration)) +
   geom_boxplot() + 
   labs(title = "Immigration Language in Chyrons by Channel",
        subtitle = "October 17 to November 14",
        x = "Channel", y = "Language Count") +
   theme_minimal() +
-   geom_text_repel(aes(label = outlier), na.rm = T, hjust = -0.3) +
   theme(axis.line = element_line())
 
-prog_hist <- sentiment_channels %>%
+# Creating boxplot for progressive by channel
+
+pro_box <- content_df %>% 
   group_by(channel) %>% 
-  mutate(outlier = ifelse(is_outlier(progressive_count), progressive_count, NA)) %>% 
-  ggplot(., aes(channel, progressive_count)) +
+  ggplot(., aes(channel, progressive)) +
   geom_boxplot() + 
-  labs(title = "Progressivism Language in Chyrons by Channel",
+  labs(title = "Progressive Language in Chyrons by Channel",
        subtitle = "October 17 to November 14",
        x = "Channel", y = "Language Count") +
   theme_minimal() +
-   geom_text_repel(aes(label = outlier), na.rm = T, hjust = -0.3) +
   theme(axis.line = element_line())
 
-cons_hist <- sentiment_channels %>% 
+# Creating boxplot for conservative by channel
+
+con_box <- content_df %>% 
   group_by(channel) %>% 
-  mutate(outlier = ifelse(is_outlier(conservatism_count), conservatism_count, NA)) %>% 
-  ggplot(., aes(channel, conservatism_count)) +
+  ggplot(., aes(channel, conservative)) +
   geom_boxplot() + 
-  labs(title = "Conservatism Language in Chyrons by Channel",
+  labs(title = "Conservative Language in Chyrons by Channel",
        subtitle = "October 17 to November 14",
        x = "Channel", y = "Language Count") +
   theme_minimal() +
-   geom_text_repel(aes(label = outlier), na.rm = T, hjust = -0.3) +
   theme(axis.line = element_line())
 
-language_all_counts <- sentiment_channels %>%
-  pivot_longer(cols = populism_count:conservatism_count,
-               names_to = "metric",
-               values_to = "count") %>%
-  ggplot(aes(x = date_x, y = count, color = channel)) +
-  geom_point() +
-  theme_classic() +
-  facet_wrap(~metric) +
-  labs(title = "Language Sentiment Across Channels",
-       subtitle = "October 17 to November 14",
-       x = "Date",
-       y = "Word Count")
+# Combining boxplots
 
-sum_table <- sentiment_channels %>% group_by(channel) %>%
-  summarize(total_populism = sum(populism_count),
-            total_environment = sum(environment_count, na.rm = T),
-            total_immigration = sum(immigration_count, na.rm = T),
-            total_proggresivsim = sum(progressive_count, na.rm = T),
-            total_conservatism = sum(conservatism_count, na.rm = T),
-            .groups = "drop")
+all_boxes <- (pop_box + img_box + env_box) / (pro_box + con_box)
 
-summ_table_gt <- sum_table %>%
-  gt() %>%
+```
+
+```{r making gt table, include = FALSE}
+
+# Making gt table of full counts
+
+full_count_dfm <- dfm(content_toks, groups = c("channel"))
+
+full_count_categories <- dfm_lookup(full_count_dfm, dictionary = content_dict)
+
+full_count_df <- convert(full_count_categories, to = "data.frame") %>% 
+  mutate(Channel = doc_id) %>% 
+  select(-doc_id)
+
+full_count_gt <- gt(full_count_df) %>% 
   tab_header(title = "Language Sentiment Across Channels",
-             subtitle = "October 17 to November 14")
-
+             subtitle = "October 17 to November 14") %>% 
+  cols_move(
+    columns = vars(populism, environment, immigration, progressive, conservative),
+    after = vars(Channel)
+  ) %>% 
+  tab_spanner(label = "Word Count for Each Content Category", columns = vars(populism, environment, immigration, progressive, conservative)) %>% 
+  cols_label(populism = "Populism", environment = "Environment", immigration = "Immigration", 
+             progressive = "Progressive", conservative = "Conservative")
 
 
 ```
 
+```{r regressions, include = FALSE}
 
-```{r regression, include = FALSE}
+# Making dfm for regression and turning it into a df
 
-sentiment_channels
+regression_dfm <- dfm(content_toks, groups = c("channel", "post_election", "primetime", "date_x", "ranking"))
 
-populist_fit <- lm(populism_count ~ ranking, data = sentiment_channels)
-immigration_fit <- lm(immigration_count ~ ranking, data = sentiment_channels)
-env_fit <- lm(environment_count ~ ranking, data = sentiment_channels)
-prog_fit <- lm(progressive_count ~ ranking, data = sentiment_channels)
-cons_fit <- lm(conservatism_count ~ ranking, data = sentiment_channels)
+regression_categories <- dfm_lookup(regression_dfm, dictionary = content_dict)
 
-pop_fac_fit <- lm(populism_count ~ as.factor(channel), data = sentiment_channels)
-img_fac_fit <- lm(immigration_count ~ as.factor(channel), data = sentiment_channels)
-env_fac_fit <- lm(environment_count ~ as.factor(channel), data = sentiment_channels)
-prog_fac_fit <- lm(progressive_count ~ as.factor(channel), data = sentiment_channels)
-cons_fac_fit <- lm(conservatism_count ~ as.factor(channel), data = sentiment_channels)
+regression_df <- convert(regression_categories, to = "data.frame") %>% 
+  group_by(doc_id) %>% 
+  separate(doc_id, c("channel", "election", "primetime", "date", "ranking"), sep = "([.])", extra = "merge") %>% 
+  mutate(date = ymd(date))
 
+# Running regressions
 
-reg_plots <- sentiment_channels %>%
-  pivot_longer(cols = populism_count:conservatism_count,
-               names_to = "metric",
-               values_to = "count") %>%
-  ggplot(aes(x = ranking, y = count)) +
-  geom_jitter(width = .2) +
-  geom_smooth(method = "lm") +
-  facet_wrap(~metric) +
-  theme_classic() +
-  labs(title = "Language Count vs. Channel Ranking",
-       x = "Channel Ideology Ranking",
-       y = "Count")
+pop_fit <-
+  lm(populism ~ as.factor(channel) + as.factor(election) + as.factor(primetime),
+     data = regression_df)
 
+env_fit <-
+  lm(environment ~ as.factor(channel) + as.factor(election) + as.factor(primetime),
+     data = regression_df)
 
+img_fit <-
+  lm(immigration ~ as.factor(channel) + as.factor(election) + as.factor(primetime),
+     data = regression_df)
+
+pro_fit <-
+  lm(progressive ~ as.factor(channel) + as.factor(election) + as.factor(primetime),
+     data = regression_df)
+
+con_fit <-
+  lm(conservative ~ as.factor(channel) + as.factor(election) + as.factor(primetime),
+     data = regression_df)
 ```
 ## Preliminary Analysis
 
@@ -336,7 +303,7 @@ rankings of 1, 2, and 3, respectively. The plots below show our preliminary find
 We classified the below categories using word baskets built by the study referenced in our project proposal. The table below shows the raw counts of how many times each channel used a word associated with these categories. 
 
 ```{r gt, echo=FALSE}
-summ_table_gt
+full_count_gt
 ```
 
 ### How much specific language is each channel using each day?
@@ -344,12 +311,7 @@ summ_table_gt
 The histograms below visualize how much channels use the categorical language on a daily basis. 
 
 ```{r hists, warning = FALSE, echo=FALSE}
-pop_hist
-env_hist
-imm_hist
-prog_hist
-cons_hist
-
+all_boxes
 ```
 
 ### How does usage vary across time?
@@ -357,7 +319,7 @@ cons_hist
 The plots below visualize the change in daily language use for each channel.
 
 ```{r time, echo=FALSE, warning=FALSE}
-language_all_counts
+#language_all_counts
 ```
 
 ### Regression: Does Ideology have an affect on language usage?
@@ -365,7 +327,7 @@ language_all_counts
 The table below shows the results of five different regressions and the plot below shows the line of best fit for each regression. 
 
 ```{r regs, results = "asis", echo=FALSE, warning=FALSE}
-stargazer(populist_fit, immigration_fit,
+stargazer(pop_fit, img_fit,
           env_fit,
           prog_fit,
           cons_fit,
@@ -373,19 +335,6 @@ stargazer(populist_fit, immigration_fit,
           column.sep.width = "0.3pt",
           font.size= "footnotesize",
           type = "latex")
-
-stargazer(pop_fac_fit, img_fac_fit,
-          env_fac_fit,
-          prog_fac_fit,
-          cons_fac_fit,
-          single.row = TRUE,
-          column.sep.width = "0.3pt",
-          font.size= "footnotesize",
-          type = "latex")
-
-reg_plots
-
-
 
 ```
 
