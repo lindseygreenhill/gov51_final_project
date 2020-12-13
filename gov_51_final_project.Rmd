@@ -24,6 +24,7 @@ library(stargazer)
 library(tidyverse)
 library(patchwork)
 library(ggrepel)
+library(ggpubr)
 ```
 
 ```{r data loading, include = FALSE}
@@ -293,17 +294,69 @@ con_fit <-
      data = regression_df)
 ```
 
+```{r scatterplots, include=FALSE}
+
+# creating scatter plots of primary regression relationships
+
+pop_scat <- ggplot(regression_df,
+                   aes(x = channel, y = populism)) +
+  geom_jitter() +
+  theme_minimal() +
+  labs(title = "Hourly Populist Language Counts vs. Channel",
+       subtitle = "Channel as factor variable",
+       x = "Channel",
+       y = "Count")
+con_scat <- ggplot(regression_df,
+                   aes(x = channel, y = conservative)) +
+  geom_jitter() +
+  theme_minimal() +
+  labs(title = "Hourly Conservative Language Counts vs. Channel",
+       subtitle = "Channel as factor variable",
+       x = "Channel",
+       y = "Count")
+prog_scat <- ggplot(regression_df,
+                   aes(x = channel, y = progressive)) +
+  geom_jitter() +
+  theme_minimal() +
+  labs(title = "Hourly Progressive Language Counts vs. Channel",
+       subtitle = "Channel as factor variable",
+       x = "Channel",
+       y = "Count")
+img_scat <- ggplot(regression_df,
+                   aes(x = channel, y = immigration)) +
+  geom_jitter() +
+  theme_minimal() +
+  labs(title = "Hourly Immigration Language Counts vs. Channel",
+       subtitle = "Channel as factor variable",
+       x = "Channel",
+       y = "Count")
+
+env_scat <- ggplot(regression_df,
+                   aes(x = channel, y = environment)) +
+  geom_jitter() +
+  theme_minimal() +
+  labs(title = "Hourly Environmental Language Counts vs. Channel",
+       subtitle = "Channel as factor variable",
+       x = "Channel",
+       y = "Count")
+
+ggarrange(pop_scat, con_scat, prog_scat, img_scat, env_scat)
+
+  
+
+```
+
 # Project Introduction
 
 The purpose of this project is to examine what factors influence news coverage. We became interested in this general topic after hearing and reading about increasing media polarization between conservatives and liberals. Per work from the [Pew Research Center](https://www.journalism.org/2020/01/24/u-s-media-polarization-and-the-2020-election-a-nation-divided/), Americans are increasingly watching news channels that are seen as in line with their own political views, and avoiding those that are not. The result is a media industry that is, for the most part, divided by political ideology. With this in mind, we wanted to see if news channels that are seen as leaning left or right present meaningfully different news coverage. 
 
-### Project Design
+## Data and Project Design
 
 In order to assess potential differences in news coverage amongst channels, we used a data set created by the [Internet Archive's Third Eye Project](https://archive.org/services/third-eye.php). This data set contains news chyrons - the scrolling captions at the bottom of broadcast images - for four different news channels (MSNBC, CNN, Fox News, and BBC). Although it would be ideal to work with full transcripts of news broadcasts, we did not have access to that data, and we believe chryons are reasonably representative of each channel's coverage. We only included data from MSNBC, CNN, and Fox News, because the data for BBC was problematic in its transcription. The data includes coverage from October 17, 2020 to November 14, 2020. 
 
-We performed textual analysis to classify the language each channel used into five categories: Populist, Environmental, Progressive, Conservative, and Immigration Related. We classified the language using preexisting dictionaries taken from a [2017 study](https://www.tandfonline.com/doi/abs/10.1080/17457289.2011.539483) of partisan language in Belgium. It would have been better to use dictionaries created for American politics, but we still think that the ones in the study are relevant and therefore useful. See the word basket section for a more details discussion on the dictionaries. 
+We performed textual analysis to classify the language each channel used into five categories: Populist, Environmental, Progressive, Conservative, and Immigration Related. We classified the language using preexisting dictionaries taken from a [2017 study](https://www.tandfonline.com/doi/abs/10.1080/17457289.2011.539483) of partisan language in Belgium. It would have been better to use dictionaries created for American politics, but we still think that the ones in the study are relevant and therefore useful. See the word baskets section for more details on the dictionaries. 
 
-We ran a linear regression to see if there was a statistically significant relationship between channel and language usage. We also included binary variables of whether or not the coverage was before the election and whether or not the coverage was in prime time in the regression. See the regression section for a discussion on why we thought these variables are important to include. 
+We ran a linear regression to see if there was a statistically significant relationship between channel and language usage. We also included binary variables of whether or not the coverage was before the election and whether or not the coverage was in prime time in the regression. Every chryon after November 3, 2020 is considered to be post election. Every chyron between 8PM and 11PM is considered to be prime time. 
 
 ### Initial Hypothesis
 
@@ -311,7 +364,31 @@ Our initial hypothesis is that Fox News, the most conservative of the news chann
 
 \newpage
 
-# Exploratory Analysis
+### Word Baskets
+
+As mentioned in the introduction, we used word baskets developed in a different study to classify the language in the chyrons as populist, conservative, progressive, immigration related, or environmental. If the word matched any of the words in the word basket, it was counted an an instance of that type of language. The word baskets are as follows:
+
+Populist Basket: deceit, treason, betray, absurd, arrogant, promise, corrupt, direct, elite, establishment, ruling, caste, class, mafia, undemocratic, politics, political, politicize, politician, progaganda, referendum, regime, shame, admit, tradition, people
+
+Conservative Basket: belief, family, church, norm, porn, sex, values, conservative, conservatism, custom
+
+Progressive Basket: progress, right, freedom, self-disposition, handicap, poverty, protection, honest, equal, education, pension, social, weak
+
+Environment Basket: green, climate, environment, heating, durable
+
+Immigration Basket: asylum, halal, scarf, illegal, immigrant, immigration, immigrate, Islam, Koran, Muslim, foreign
+
+Again, these dictionaries were originally created for politics in Belgium, and therefore we see some words that might not be as applicable in the US. For example, immigration related language in the US might in reality focus on Mexican immigration instead of Islam. 
+
+The table below shows the **total** language counts for each category above. 
+
+```{r f_gt, echo=FALSE}
+full_count_gt
+```
+
+\newpage
+
+# Results - Exploratory Analysis
 
 We used the quanteda package to perform initial textual analysis of the news chyrons. We also looked at the distributions of language usage across channels. Overall, our findings suggest that our initial hypothesis is incorrect. 
 
@@ -358,69 +435,78 @@ primetime_relative
 
 ## Boxplot Analysis
 
-Before running a regression, we wanted to visualize the distribution of language uses across channels to get an initial sense of the trends. Before talking about the results and graphics, we will give further details on the dictionaries we used to classify the language. 
-
-### Word Baskets
-
-As mentioned in the introduction, we used word baskets developed in a different study to classify the language in the chyrons as populist, conservative, progressive, immigration related, or environmental. If the word matched any of the words in the word basket, it was counted an an instance of that type of language. The word baskets are as follows:
-
-Populist Basket: deceit, treason, betray, absurd, arrogant, promise, corrupt, direct, elite, establishment, ruling, caste, class, mafia, undemocratic, politics, political, politicize, politician, progaganda, referendum, regime, shame, admit, tradition, people
-
-Conservative Basket: belief, family, church, norm, porn, sex, values, conservative, conservatism, custom
-
-Progressive Basket: progress, right, freedom, self-disposition, handicap, poverty, protection, honest, equal, education, pension, social, weak
-
-Environment Basket: green, climate, environment, heating, durable
-
-Immigration Basket: asylum, halal, scarf, illegal, immigrant, immigration, immigrate, Islam, Koran, Muslim, foreign
-
-Again, these dictionaries were originally created for politics in Belgium, and therefore we see some words that might not be as applicable in the US. For example, immigration related language in the US might in reality focus on Mexican immigration instead of Islam. 
+Before running a regression, we wanted to visualize the distribution of language uses across channels to get an initial sense of the trends. 
 
 
+### Populism Boxplot
 
-## Preliminary Analysis
+The boxplot below shows the distribution of **daily** populist language counts for each channel. From this graphic, it appears that CNN uses more populist language on average compared to Fox News or MSNBC. This finding is the opposite of what we expected in our initial hypothesis. 
 
-In this analysis, we gathered, cleaned, and wrangled news data from October 17 to November 14, 2020. 
-We chose to include Fox News, CNN, and MSNB in our analysis and assigned those channels ideological
-rankings of 1, 2, and 3, respectively. The plots below show our preliminary findings.
-
-### How much specific language is each channel using?
-
-Visualizing the language each channel uses by a variety of variables. 
-
-
-
-We classified the below categories using word baskets built by the study referenced in our project proposal. The table below shows the raw counts of how many times each channel used a word associated with these categories. 
-
-```{r gt, echo=FALSE}
-full_count_gt
-```
-
-### How much specific language is each channel using each day?
-
-The histograms below visualize how much channels use the categorical language on a daily basis. 
-
-```{r hists, warning = FALSE, echo=FALSE}
-
+```{r popbox, echo=FALSE, warning=FALSE}
 pop_box
-img_box  
-env_box 
-pro_box 
+```
+
+\newpage
+### Conservative Boxplot
+
+The boxplot below shows the distribution of **daily** conservative language counts for each channel. From this graphic, it appears that CNN and MSNBC uses more conservative language on average compared to Fox News. This finding is the opposite of what we expected in our initial hypothesis. 
+
+```{r cbox, echo=FALSE, warning=FALSE}
 con_box
+```
+\newpage
+
+### Progressive Boxplot
+
+The boxplot below shows the distribution of **daily** progressive language counts for each channel. From this graphic, it appears that CNN uses more progressive language on average compared to Fox News or MSNBC. This finding is in line with what we expected in our initial hypothesis. 
+
+```{r probox, echo=FALSE, warning=FALSE}
+pro_box
+```
+
+\newpage
+
+### Environment Boxplat
+
+The boxplot below shows the distribution of **daily** environmental language counts for each channel. From this graphic, there doesn't appear to be a news channel that uses environmental language more than other news channels. Moreover, it appears that the use of environmental language is in general quite infrequent.  
+
+```{r envbox, echo=FALSE, warning=FALSE}
+env_box
+```
+
+\newpage
+
+### Immigration Boxplot
+
+The boxplot below shows the distribution of **daily** immigration related language counts for each channel. From this graphic, it appears that CNN uses slightly more immigration related language on average compared to Fox News or MSNBC. This finding is in line with what we expected in our initial hypothesis. 
+
+```{r imgbox, echo=FALSE, warning=FALSE}
+img_box
+```
+\newpage
+
+# Results - Regression Analysis
+
+We ran five regressions for the five different language classifications (populist, conservative, progressive, environmental, immigration) to look at the relationship between language usage and channel. The dependent variable in our regression is hourly language counts. The independent variables are channel (as a factor variable), prime time (as a binary variable), and post election (as a binary variable). 
+
+### Scatterplots
+
+The following scatterplots visualize the relationship between language usage and channel. 
+
+```{r scats, echo=FALSE}
+pop_scat
+con_scat
+prog_scat
+env_scat
+img_scat
 
 ```
 
-### How does usage vary across time?
+\newpage
 
-The plots below visualize the change in daily language use for each channel.
+### Regression Results
 
-```{r time, echo=FALSE, warning=FALSE}
-#language_all_counts
-```
-
-### Regression: Does Ideology have an affect on language usage?
-
-The table below shows the results of five different regressions and the plot below shows the line of best fit for each regression. 
+The table below shows the results of five different regressions. 
 
 ```{r regs, results = "asis", echo=FALSE, warning=FALSE}
 stargazer(pop_fit, img_fit,
@@ -433,6 +519,19 @@ stargazer(pop_fit, img_fit,
           type = "latex")
 
 ```
+
+### Discussion
+
+**Populist Regression -** The results suggest that Fox News and MSNBC use less populist language than CNN (a result supported by the former boxplots). Both of these coefficients are statistically significant at a .01 level. The pre-election coefficient is positive, suggesting that news coverage on average uses more populist language pre election holding channel and primetime constant. This coefficient is also statistically significant at a .01 level. The primetime coefficient is positive, suggesting that news coverage on average uses more populist language during prime time holding channel and pre-election constant. This coefficient is statistically significant at the .01 level. 
+
+**Immigration Regression -** The results suggest that Fox News and MSNBC use less populist language than CNN. However, neither of these coefficients are statistically significant. The pre-election coefficient is positive, suggesting that news coverage on average uses more immigration related language pre election holding channel and primetime constant. This coefficient is statistically significant at a .01 level. The primetime coefficient is negative, suggesting that news coverage on average uses less immigration related language during prime time holding channel and pre-election constant. However, this coefficient is not statistically significant. 
+
+**Environment Regression -** The results suggest that Fox News and MSNBC use less environmental language than CNN. However, neither of these coefficients are statistically significant. The pre-election coefficient is positive, suggesting that news coverage on average uses more immigration related language pre election holding channel and primetime constant. This coefficient is not statistically significantl. The primetime coefficient is negative, suggesting that news coverage on average uses less immigration related language during prime time holding channel and pre-election constant. However, this coefficient is not statistically significant. 
+
+**Progressive Regression -** The results suggest that Fox News and MSNBC use less progressive language than CNN. Both of these coefficients are statistically significant at the .01 level. The pre-election coefficient is positive, suggesting that news coverage on average uses more progressive language pre election holding channel and primetime constant. This coefficient is statistically significant at a .05 level. The primetime coefficient is negative, suggesting that news coverage on average uses less progressivelanguage during prime time holding channel and pre-election constant. This coefficient is statistically significant at the .01 level. 
+
+**Conservative Regression -** The results suggest that Fox News uses less conservative language than CNN and MSNBC uses more conservative language than CNN on average. Only the Fox News coefficients is statistically significant. The pre-election coefficient is positive, suggesting that news coverage on average uses more conservative language pre election holding channel and primetime constant. This coefficient is also statistically significant at a .01 level. The primetime coefficient is positive, suggesting that news coverage on average uses more conservative language during prime time holding channel and pre-election constant. This coefficient is statistically significant at the .01 level. 
+
 
 There does not appear to be a strong relationship between ideology and language usage. 
 
