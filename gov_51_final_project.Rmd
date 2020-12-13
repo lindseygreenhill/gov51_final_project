@@ -135,7 +135,7 @@ content_dict <- dictionary(list(populism = c("deceit", "treason",
                                 "equal","education",
                                 "pension","social",
                                 "weak"),
-                conservative = c("belief","famil",
+                conservative = c("belief","family",
                                  "church","norm",
                                  "porn","sex",
                                  "values","conservative",
@@ -347,7 +347,7 @@ post_election_relative
  
 ### Prime Time Keyness Plot
 
-We thought it could be interesting to look at prime time coverage vs non prime time coverage because of the saliency of prime time coverage. Additionally, the respective  hosts for each channel's prime time news shows tend to be particulary divisive politically, so we thought that might have an impact on the language used during their shows. Interestingly, non prime time coverage seems to focus more on cities compared to prime time coverage. Meanwhile, prime time coverage seems to focus on the election compared to non primt etime coverage.
+We thought it could be interesting to look at prime time coverage vs non prime time coverage because of the saliency of prime time coverage. Additionally, the respective  hosts for each channel's prime time news shows tend to be particulary divisive politically, so we thought that might have an impact on the language used during their shows. Interestingly, non prime time coverage seems to focus more on cities compared to prime time coverage. Meanwhile, prime time coverage seems to focus on the election compared to non prime e time coverage.
 
 
 ```{r ptime_key, echo=FALSE}
@@ -358,7 +358,23 @@ primetime_relative
 
 ## Boxplot Analysis
 
+Before running a regression, we wanted to visualize the distribution of language uses across channels to get an initial sense of the trends. Before talking about the results and graphics, we will give further details on the dictionaries we used to classify the language. 
 
+### Word Baskets
+
+As mentioned in the introduction, we used word baskets developed in a different study to classify the language in the chyrons as populist, conservative, progressive, immigration related, or environmental. If the word matched any of the words in the word basket, it was counted an an instance of that type of language. The word baskets are as follows:
+
+Populist Basket: deceit, treason, betray, absurd, arrogant, promise, corrupt, direct, elite, establishment, ruling, caste, class, mafia, undemocratic, politics, political, politicize, politician, progaganda, referendum, regime, shame, admit, tradition, people
+
+Conservative Basket: belief, family, church, norm, porn, sex, values, conservative, conservatism, custom
+
+Progressive Basket: progress, right, freedom, self-disposition, handicap, poverty, protection, honest, equal, education, pension, social, weak
+
+Environment Basket: green, climate, environment, heating, durable
+
+Immigration Basket: asylum, halal, scarf, illegal, immigrant, immigration, immigrate, Islam, Koran, Muslim, foreign
+
+Again, these dictionaries were originally created for politics in Belgium, and therefore we see some words that might not be as applicable in the US. For example, immigration related language in the US might in reality focus on Mexican immigration instead of Islam. 
 
 
 
